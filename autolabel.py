@@ -145,7 +145,8 @@ for image_path in images:
     imH, imW, _ = image.shape 
     image_resized = cv2.resize(image_rgb, (width, height))
     input_data = np.expand_dims(image_resized, axis=0)
-    
+    print(np.shape(input_data))
+
     filename = image_path.split('\\')[-1]
     filename2 = str(filename.split('.')[0])
     filename3 = filename2 + '.xml'
@@ -171,30 +172,33 @@ for image_path in images:
     classes = interpreter.get_tensor(output_details[1]['index'])[0] # Class index of detected objects
     scores = interpreter.get_tensor(output_details[2]['index'])[0] # Confidence of detected objects
     #num = interpreter.get_tensor(output_details[3]['index'])[0]  # Total number of detected objects (inaccurate and not needed)
-
+    ymin = []
+    xmin = []
+    ymax = []
+    xmax = []
     # Loop over all detections and draw detection box if confidence is above minimum threshold
     for i in range(len(scores)):
         if ((scores[i] > min_conf_threshold) and (scores[i] <= 1.0)):
 
             # Get bounding box coordinates and draw box
             # Interpreter can return coordinates that are outside of image dimensions, need to force them to be within image using max() and min()
-            ymin = int(max(1,(boxes[i][0] * imH)))
-            xmin = int(max(1,(boxes[i][1] * imW)))
-            ymax = int(min(imH,(boxes[i][2] * imH)))
-            xmax = int(min(imW,(boxes[i][3] * imW)))
+            ymin.append(int(max(1,(boxes[i][0] * imH))))
+            xmin.append(int(max(1,(boxes[i][1] * imW))))
+            ymax.append(int(min(imH,(boxes[i][2] * imH))))
+            xmax.append(int(min(imW,(boxes[i][3] * imW))))
             
-            print("xmin,ymin,xmax,ymax",xmin,ymin,xmax,ymax)
+            print("xmin,ymin,xmax,ymax",xmin[i],ymin[i],xmax[i],ymax[i])
             
-            cv2.rectangle(image, (xmin,ymin), (xmax,ymax), (10, 255, 0), 2)
+            cv2.rectangle(image, (xmin[i],ymin[i]), (xmax[i],ymax[i]), (10, 255, 0), 2)
             
             if scores[i] > 0.5:
                 num.append(scores[i])
 
             label = '%s: %d%%' % ('Drone', int(scores[i]*100)) # Example: 'person: 72%' #object_name
             labelSize, baseLine = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.7, 2) # Get font size
-            label_ymin = max(ymin, labelSize[1] + 10) # Make sure not to draw label too close to top of window
-            cv2.rectangle(image, (xmin, label_ymin-labelSize[1]-10), (xmin+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
-            cv2.putText(image, label, (xmin, label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
+            label_ymin = max(ymin[i], labelSize[1] + 10) # Make sure not to draw label too close to top of window
+            cv2.rectangle(image, (xmin[i], label_ymin-labelSize[1]-10), (xmin[i]+labelSize[0], label_ymin+baseLine-10), (255, 255, 255), cv2.FILLED) # Draw white box to put label text in
+            cv2.putText(image, label, (xmin[i], label_ymin-7), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2) # Draw label text
 
     
     
@@ -216,13 +220,13 @@ for image_path in images:
         f.write('\t<source>\n\t\t<database>Unknown</database>\n\t</source>\n')
         f.write('\t<size>\n\t\t<width>300</width>\n\t\t<height>300</height>\n')
         f.write('\t\t<depth>3</depth>\n\t</size>\n\t<segmented>0</segmented>\n')
-        for i in num:
+        for i in range(len(num)):
             f.write('\t<object>\n\t\t<name>Drone</name>\n\t\t<pose>Unspecified</pose>\n')
             f.write('\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n')
-            f.write('\t\t<bndbox>\n\t\t\t<xmin>'+str(xmin)+'</xmin>\n')
-            f.write('\t\t\t<ymin>'+str(ymin)+'</ymin>\n')
-            f.write('\t\t\t<xmax>'+str(xmax)+'</xmax>\n')
-            f.write('\t\t\t<ymax>'+str(ymax)+'</ymax>\n')
+            f.write('\t\t<bndbox>\n\t\t\t<xmin>'+str(xmin[i])+'</xmin>\n')
+            f.write('\t\t\t<ymin>'+str(ymin[i])+'</ymin>\n')
+            f.write('\t\t\t<xmax>'+str(xmax[i])+'</xmax>\n')
+            f.write('\t\t\t<ymax>'+str(ymax[i])+'</ymax>\n')
             f.write('\t\t</bndbox>\n\t</object>\n')
         f.write('</annotation>')
         time.sleep(0.1)
